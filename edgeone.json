@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm run check && npm test",
+  "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "nodeVersion": "22.11.0"
+}
