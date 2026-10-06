@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#121c2d">
+  <meta name="description" content="WireLab 串口调试工作台：连接 USB 串口，收发 HEX 与文本指令，计算校验和，搜索并分析日志。调试数据在浏览器本地处理。">
+  <title>WireLab · 串口调试工作台</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230ea5a4'/%3E%3Cpath d='m14 19 7 27 11-20 11 20 7-27' fill='none' stroke='white' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m5 7 5 5-5 5M13 17h6"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M8 3v5m8-5v5M5 8h14v3a7 7 0 0 1-14 0V8Zm7 10v4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3ZM12 9v5m0 3v.1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 1 1 5 2c-1.5 1-2 1-2 3m0 3v.1"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M3 3h15l3 3v15H3V3Zm4 0v7h10V3M7 21v-7h10v7"/></symbol>
+  </defs></svg>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#workspace" aria-label="WireLab 工作台"><span class="brand-mark">w<span>·</span></span><span>WireLab<small>SERIAL WORKBENCH</small></span></a>
+      <div class="nav-label">调试空间</div>
+      <nav aria-label="主要功能">
+        <button class="nav-item active" data-page="workspace" aria-current="page"><svg class="icon"><use href="#i-terminal"/></svg>串口工作台<span class="nav-dot"></span></button>
+        <button class="nav-item" data-page="commands"><svg class="icon"><use href="#i-code"/></svg>指令工具</button>
+        <button class="nav-item" data-page="logs"><svg class="icon"><use href="#i-search"/></svg>日志分析</button>
+      </nav>
+      <div class="sidebar-note"><span class="tiny-label">为每一次调试而设计</span><p>从字节出发，<br>让问题有迹可循。</p><div class="trace-art" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="sidebar-bottom"><button id="help-button" class="nav-item"><svg class="icon"><use href="#i-help"/></svg>使用指南</button><div class="local-badge"><svg class="icon"><use href="#i-shield"/></svg><span>数据在本地处理<small>日志不会上传至服务器</small></span></div><div class="version">WireLab <span>v1.0</span></div></div>
+    </aside>
+    <main>
+      <header class="topbar"><div class="breadcrumb">工具空间 <span>/</span> <strong id="breadcrumb-current">串口工作台</strong></div><div class="topbar-right"><span class="local-pill"><span></span>本地运行</span><span class="avatar">WL</span></div></header>
+      <div class="content">
+        <div class="page-heading"><div><div class="eyebrow">CONNECT. INSPECT. DEBUG.</div><h1 id="page-title">串口调试工作台<span class="title-dot">.</span></h1><p id="page-description">连接设备，观察数据，让每一条指令都有清晰的回应。</p></div><button class="button light" id="demo-button"><svg class="icon"><use href="#i-terminal"/></svg>体验示例会话</button></div>
+        <div class="notice" id="browser-notice" hidden><svg class="icon"><use href="#i-alert"/></svg><span>当前浏览器无法访问串口。请在电脑端 Chrome 中打开此网站；指令编辑和日志分析仍可使用。</span></div>
+        <section id="workspace-page" class="page active" aria-label="串口工作台">
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon mint"><svg class="icon"><use href="#i-plug"/></svg></div><div><span class="stat-label">设备状态</span><strong id="stat-status">未连接</strong></div><span class="stat-caption" id="stat-config">等待选择串口</span></div>
+            <div class="stat-card"><div class="stat-icon blue">↓</div><div><span class="stat-label">接收数据</span><strong><span id="rx-count">0</span><small> B</small></strong></div><span class="stat-caption">RX</span></div>
+            <div class="stat-card"><div class="stat-icon purple">↑</div><div><span class="stat-label">发送数据</span><strong><span id="tx-count">0</span><small> B</small></strong></div><span class="stat-caption">TX</span></div>
+            <div class="stat-card"><div class="stat-icon amber"><svg class="icon"><use href="#i-alert"/></svg></div><div><span class="stat-label">异常线索</span><strong id="issue-count">0</strong></div><span class="stat-caption">规则筛选</span></div>
+          </div>
+          <div class="workbench-grid">
+            <div class="settings-column">
+              <section class="card device-card"><div class="card-heading"><h2><svg class="icon"><use href="#i-plug"/></svg>设备连接</h2><span id="connection-badge" class="badge neutral">未连接</span></div>
+                <div class="device-picker"><span class="port-icon"><svg class="icon"><use href="#i-plug"/></svg></span><strong id="device-name">选择你的串口设备</strong><small id="device-detail">USB 转串口 / 开发板 / MCU</small></div>
+                <div class="form-field"><label for="baud">波特率<span>Baud rate</span></label><select id="baud"><option value="9600">9600</option><option value="19200">19200</option><option value="38400">38400</option><option value="57600">57600</option><option value="115200" selected>115200</option><option value="230400">230400</option><option value="460800">460800</option><option value="921600">921600</option><option value="1500000">1500000</option><option value="custom">自定义</option></select><input id="custom-baud" type="number" min="1" max="12000000" step="1" value="115200" aria-label="自定义波特率" hidden></div>
+                <div class="field-pair"><div class="form-field"><label for="data-bits">数据位</label><select id="data-bits"><option value="8">8 bits</option><option value="7">7 bits</option></select></div><div class="form-field"><label for="stop-bits">停止位</label><select id="stop-bits"><option value="1">1 bit</option><option value="2">2 bits</option></select></div></div>
+                <div class="field-pair"><div class="form-field"><label for="parity">校验位</label><select id="parity"><option value="none">无 None</option><option value="even">偶 Even</option><option value="odd">奇 Odd</option></select></div><div class="form-field"><label for="flow">流控</label><select id="flow"><option value="none">无</option><option value="hardware">RTS / CTS</option></select></div></div>
+                <button class="button primary full" id="connect-button"><svg class="icon"><use href="#i-plug"/></svg><span>连接串口</span></button><p class="field-hint">点击后选择并授权本机串口设备</p><p id="connect-error" class="inline-error" role="alert" hidden></p>
+              </section>
+              <section class="card preset-card"><div class="card-heading"><h2>快捷指令</h2><button class="text-button" id="manage-presets">管理 <span>↗</span></button></div><div id="preset-list" class="preset-list"></div><p class="field-hint">点击填入编辑器，发送前可再次检查</p></section>
+              <div class="tip-card"><svg class="icon"><use href="#i-shield"/></svg><div><strong>调试数据，留在你的电脑</strong><p>串口数据和日志均在浏览器处理。关闭页面后，当前会话不会保留。</p></div></div>
+            </div>
+            <div class="terminal-column">
+              <section class="terminal-card"><div class="terminal-heading"><div><span class="window-dots"><i></i><i></i><i></i></span><h2>实时终端</h2><span class="terminal-source" id="terminal-source">示例数据</span></div><div class="terminal-tools"><div class="segmented dark" aria-label="接收显示格式"><button id="view-text" class="selected" aria-pressed="true">TEXT</button><button id="view-hex" aria-pressed="false">HEX</button></div><button id="pause-button" title="暂停显示，继续接收">Ⅱ 暂停</button><button id="clear-terminal" title="清空当前终端">清空</button><button id="export-terminal" title="导出终端日志" aria-label="导出终端日志"><svg class="icon"><use href="#i-download"/></svg></button></div></div>
+                <div class="terminal-filter"><svg class="icon"><use href="#i-search"/></svg><input id="terminal-search" placeholder="搜索接收内容…" aria-label="搜索终端内容"><label><input id="auto-scroll" type="checkbox" checked>自动滚动</label></div>
+                <div id="terminal-lines" class="terminal-lines" role="log" aria-label="串口收发记录"></div>
+                <div class="terminal-footer"><span><i id="terminal-indicator"></i><span id="terminal-state">未连接 · 示例仅供体验</span></span><span><span id="terminal-line-count">0</span> 条记录 <b>UTF-8</b></span></div>
+              </section>
+              <section class="card composer-card"><div class="card-heading"><h2><svg class="icon"><use href="#i-code"/></svg>指令编辑</h2><span class="shortcut">Ctrl / ⌘ + Enter 发送</span></div>
+                <div class="composer-options"><div class="segmented"><button id="mode-hex" class="selected" aria-pressed="true">HEX</button><button id="mode-text" aria-pressed="false">文本</button></div><label>行尾<select id="ending"><option value="none">无</option><option value="cr">CR</option><option value="lf">LF</option><option value="crlf">CRLF</option></select></label><label>追加校验<select id="checksum"><option value="none">无校验</option><option value="sum8">SUM8</option><option value="xor8">XOR8</option><option value="modbus">CRC16/MODBUS</option></select></label></div>
+                <label class="sr-only" for="command-input">待发送指令</label><textarea id="command-input" rows="2" spellcheck="false" placeholder="例如 AA 55 01 00 FF">AA 55 01 00 FF</textarea><p id="command-error" class="inline-error" role="alert" hidden></p>
+                <div class="payload-preview"><span>发送预览</span><code id="payload-hex">AA 55 01 00 FF</code><small id="payload-size">5 字节</small></div>
+                <div class="composer-actions"><button class="button light small" id="save-command"><svg class="icon"><use href="#i-save"/></svg>保存指令</button><button class="button light small" id="copy-command"><svg class="icon"><use href="#i-copy"/></svg>复制 HEX</button><button class="button primary send" id="send-button" disabled>发送指令<svg class="icon"><use href="#i-arrow"/></svg></button></div>
+                <p class="checksum-hint" id="checksum-hint" hidden>校验范围为输入正文，行尾随后追加；CRC16/MODBUS 低字节在前。</p>
+              </section>
+              <section class="card findings-card"><div class="card-heading"><h2><span class="status-dot amber-dot"></span>异常线索</h2><button class="text-button" id="analyze-session">分析完整日志 <span>↗</span></button></div><div id="session-findings"></div></section>
+            </div>
+          </div>
+        </section>
+        <section id="commands-page" class="page" aria-label="指令工具" hidden><div class="tools-grid"><section class="card"><div class="card-heading"><h2>HEX / 文本转换</h2><span class="badge mint-badge">UTF-8</span></div><div class="form-field"><label for="convert-input">输入内容</label><textarea id="convert-input" rows="7" spellcheck="false" placeholder="输入文本或 HEX，例如 AT 或 41 54"></textarea></div><div class="button-row"><button class="button primary" id="text-to-hex">文本 → HEX</button><button class="button light" id="hex-to-text">HEX → 文本</button></div><div class="form-field"><label for="convert-output">转换结果</label><textarea id="convert-output" rows="5" readonly placeholder="转换结果将在这里显示"></textarea></div><button class="button light small" id="copy-conversion"><svg class="icon"><use href="#i-copy"/></svg>复制结果</button></section><section class="card"><div class="card-heading"><h2>我的指令库</h2><span id="saved-count" class="badge neutral">0 条</span></div><p class="muted">将常用指令保存在当前浏览器，随时载入工作台。</p><div id="saved-commands" class="saved-commands"></div><div class="tool-note"><strong>关于校验计算</strong><p>工作台支持 SUM8、XOR8、CRC16/MODBUS。选择校验后，发送预览即为完整字节；校验范围为正文，行尾不参与计算。</p></div></section></div></section>
+        <section id="logs-page" class="page" aria-label="日志分析" hidden>
+          <div class="log-grid"><section class="card log-import"><div class="card-heading"><h2>导入调试日志</h2><button class="text-button" id="load-demo-log">载入示例</button></div><label class="upload-zone" for="log-file"><svg class="icon"><use href="#i-upload"/></svg><strong>选择日志文件</strong><small>UTF-8 文本 · 最大 10 MiB · 本地分析</small><input id="log-file" type="file" accept=".log,.txt,.csv,text/plain" class="sr-only"></label><div class="form-field"><label for="log-input">或直接粘贴日志<span id="log-source-name"></span></label><textarea id="log-input" rows="12" spellcheck="false" placeholder="粘贴串口日志、dmesg 或 Android logcat…"></textarea></div><button class="button primary full" id="analyze-log"><svg class="icon"><use href="#i-search"/></svg>分析日志</button><p class="field-hint">通过规则提取线索，结合上下文判断原因。</p></section><section class="card log-results"><div class="card-heading"><h2>分析结果</h2><button class="button light small" id="export-analysis"><svg class="icon"><use href="#i-download"/></svg>导出筛选结果</button></div><div class="analysis-stats"><div><strong id="log-total">0</strong><span>总行数</span></div><div><strong id="log-errors" class="error-color">0</strong><span>错误</span></div><div><strong id="log-warnings" class="warning-color">0</strong><span>警告</span></div><div><strong id="log-info">0</strong><span>信息</span></div></div><div class="analysis-filter"><div class="search-field"><svg class="icon"><use href="#i-search"/></svg><input id="log-search" placeholder="搜索关键词、模块或错误码…" aria-label="搜索日志"></div><select id="log-level" aria-label="日志等级筛选"><option value="all">所有等级</option><option value="error">仅错误</option><option value="warning">仅警告</option><option value="info">仅信息</option></select></div><div class="log-result-caption"><span id="log-matched">尚未分析日志</span><span>点击一行查看上下文</span></div><div id="log-results" class="log-rows"></div><div id="log-more" class="field-hint" hidden>仅显示前 1000 条匹配结果；导出包含全部匹配结果。</div></section></div>
+        </section>
+        <footer class="workspace-footer"><span>WireLab <span class="footer-divider">/</span> 专注于每一次调试</span><span><svg class="icon"><use href="#i-shield"/></svg>浏览器本地处理</span></footer>
+      </div>
+    </main>
+  </div>
+  <dialog id="app-dialog"><div class="dialog-heading"><h2 id="dialog-title"></h2><button id="dialog-close" class="dialog-close" aria-label="关闭弹窗">×</button></div><div id="dialog-body"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
